@@ -1,38 +1,72 @@
 package parse
 
 import (
-	"reflect"
+	"io/ioutil"
+	"strings"
 	"testing"
+
+	"github.com/pascaldekloe/docc"
 )
 
-//go:generate ragel -Z c.rl
-
-type goldenParse struct {
-	lines    int
-	feed     string
-	comments []string
+var defTypes = []string{
+	`extern int var_decl;`,
+	`int var_def;`,
+	`int func_decl(void);`,
+	`int func_def(void) {`,
 }
 
-var goldenCs = []goldenParse{
-	{3, "// line comment\nint i, j;\n", []string{"// line comment\n"}},
-	{3, "\npre// trailing comment\n", []string{"// trailing comment\n"}},
-	{2, "pre/*inner comment*/fix\n", []string{"/*inner comment*/"}},
-	{3, "/* block\ncomment */\n", []string{"/* block\ncomment */"}},
-	{4, "int main(void) {\n//inner comment line\n}\n", nil},
-	{1, "int main(void) {a /*inner comment block*/ ignore}", nil},
-	{1, `"string"`, nil},
-	{1, `"a\"b"`, nil},
-	{1, `"//not a comment"`, nil},
-	{1, `'c'`, nil},
-	{1, `'\''`, nil},
-	{1, `'{'`, nil},
+var commentTypes = []string{
+	`// single line`,
+	`// line 1
+// line 2`,
+	`/* block */`,
+	`/* block 1
+block 2 */`,
 }
 
-func TestC(t *testing.T) {
-	for _, gold := range goldenCs {
-		lineCount, comments := C([]byte(gold.feed))
-		if lineCount != gold.lines || !reflect.DeepEqual(comments, gold.comments) {
-			t.Errorf("%q: got (%d, %q), want (%d, %q)", gold.feed, lineCount, comments, gold.lines, gold.comments)
+func TestComments(t *testing.T) {
+	for _, def := range defTypes {
+		for _, comment := range commentTypes {
+			feed := comment + "\n" + def
+
+			c := make(chan *docc.Decl)
+			go C([]byte(feed), c)
+
+			var got *docc.Decl
+			for d := range c {
+				if got == nil {
+					got = d
+				} else {
+					t.Errorf("%q: got redundant result %#v", feed, d)
+				}
+			}
+			if got == nil {
+				t.Errorf("%q: no results", feed)
+				continue
+			}
+
+			if want := strings.Count(comment, "\n") + 2; got.LineNo != want {
+				t.Errorf("%q: got line number %d, want %d", feed, got.LineNo, want)
+			}
+			if got.Source != def {
+				t.Errorf("%q: got source %q, want %q", feed, got.Source, def)
+			}
+			if got.Comment != comment {
+				t.Errorf("%q: got comment %q, want %q", feed, got.Comment, comment)
+			}
 		}
+	}
+}
+
+func TestStdioH(t *testing.T) {
+	data, err := ioutil.ReadFile("/usr/include/stdio.h")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	c := make(chan *docc.Decl, 10)
+	go C(data, c)
+	for def := range c {
+		t.Logf("stdio.h:%d: %q\n\t%q\n\n", def.LineNo, def.Source, def.Comment)
 	}
 }

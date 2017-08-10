@@ -1,70 +1,107 @@
 package parse
 
+import "github.com/pascaldekloe/docc"
+
 %%{
 	machine c_blocks;
 	write data;
 }%%
 
+// C sends all declarations and definitions from a C source code file to found.
+func C(file []byte, found chan<- *docc.Decl) {
+	// Ragel setup
+	var (
+		data = file      // input
+		cs   int         // state
+		p    int         // data index
+		pe   = len(data) // data end
+	)
 
-func C(data []byte) (lineCount int, comments []string) {
-	// first byte index
-	var commentOffset int
-	// source code lines
+	// comment byte indices
+	var commentOffset, commentEnd int
+
+	// source code line number
 	lineNo := 1
+	// first byte index
+	lineOffset := 0
 	// source code block nesting
 	blockLevel := 0
 
-	// Ragel state
-	var cs int
-	// Ragel data index
-	var p int = 0
-	// Ragel data end
-	var pe int = len(data)
-
 	for p < pe {
 %%{
-action comment_found {
-	commentOffset = p - 1
-}
 
-action comment_submit {
-	if blockLevel == 0 {
-		comments = append(comments, string(data[commentOffset:p+1]))
+new_line = '\n' @{
+	lineNo++
+	lineOffset = p + 1
+} ;
+
+
+action comment_found {
+	if commentEnd == 0 {
+		commentOffset = p - 1
 	}
 }
 
+action comment_set {
+	commentEnd = p
+}
 
-# source code is line oriented
-new_line = '\n' @{ lineNo++ } ;
+action comment_clear {
+	commentEnd = 0
+}
 
-# preprocessor instruction
-prep = '#' ^new_line* new_line ;
+action submit {
+	if blockLevel == 0 {
+		d := docc.Decl{
+			LineNo: lineNo,
+			Source: string(data[lineOffset:p+1]),
+		}
+		if commentEnd > commentOffset {
+			d.Comment = string(data[commentOffset:commentEnd])
+		}
+		found <- &d
+	}
+}
 
-# comment line
-comment = '//' @comment_found ^new_line* new_line @comment_submit ;
+comment = '//' @comment_found ^new_line* new_line @comment_set
+        space* new_line? @comment_clear
+        ;
 
-# block comment
-comment_block = '/*' @comment_found (new_line | any)* :>> '*/' @comment_submit ;
+comment_block = '/*' @comment_found (new_line | any)* :>> '*/'
+        space* new_line? @comment_set <: space* new_line? @comment_clear
+        ;
 
-# double quoted string
-qstring = '"' ([^"\\] | new_line | ('\\' any))* '"' ;
-
-# single quoted character
-qchar = '\'' ('\\' any)? ^['\\]* '\'' ;
 
 # code block nesting
-block_start = '{' @{ blockLevel++ } ;
+block_start = '{' @submit @comment_clear @{ blockLevel++ } ;
 block_end = '}' @{ blockLevel-- } ;
 
-main := (new_line | comment | comment_block | qstring | qchar | block_start | block_end)* ;
+line_end = ';' @submit @comment_clear ;
+
+
+# parse quotations because they may contain special characters
+qstring = '"' ([^"\\] | new_line | ('\\' any))* '"' ;
+qchar = '\'' ('\\' any)? ^['\\]* '\'' ;
+
+# skip preprocessor instructions
+prep = '#' ^new_line* new_line ;
+
+# faster than stepping out of machine
+other = ! ('\n' | '/' ^[*/] | '{' | '}' | ';' | '"' | '\'' | '#') ;
+
+
+main := (new_line | comment | comment_block
+	| block_start | block_end | line_end
+	| qstring | qchar | prep | other)* ;
 
 write init;
 write exec;
+
 }%%
 
-		p++	// skip next byte
+		// skip next byte for syntax mismatch case
+		p++
 	}
 
-	lineCount = lineNo
-	return
+	close(found)
 }
