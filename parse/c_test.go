@@ -1,11 +1,11 @@
-package parse
+package parse // import "docc.io/source/parse"
 
 import (
 	"io/ioutil"
 	"strings"
 	"testing"
 
-	"github.com/pascaldekloe/docc"
+	"docc.io/source"
 )
 
 var defTypes = []string{
@@ -29,10 +29,10 @@ func TestComments(t *testing.T) {
 		for _, comment := range commentTypes {
 			feed := comment + "\n" + def
 
-			c := make(chan *docc.Decl)
+			c := make(chan *source.Decl)
 			go C([]byte(feed), c)
 
-			var got *docc.Decl
+			var got *source.Decl
 			for d := range c {
 				if got == nil {
 					got = d
@@ -64,7 +64,7 @@ func TestStdioH(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	c := make(chan *docc.Decl, 10)
+	c := make(chan *source.Decl, 10)
 	go C(data, c)
 	for def := range c {
 		t.Logf("stdio.h:%d: %q\n\t%q\n\n", def.LineNo, def.Source, def.Comment)

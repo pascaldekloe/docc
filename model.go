@@ -1,4 +1,4 @@
-package docc
+package source // import "docc.io/source"
 
 // Decl is a C declaration.
 type Decl struct {

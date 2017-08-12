@@ -1,6 +1,6 @@
-package parse
+package parse // import "docc.io/source/parse"
 
-import "github.com/pascaldekloe/docc"
+import "docc.io/source"
 
 %%{
 	machine c_blocks;
@@ -8,7 +8,7 @@ import "github.com/pascaldekloe/docc"
 }%%
 
 // C sends all declarations and definitions from a C source code file to found.
-func C(file []byte, found chan<- *docc.Decl) {
+func C(file []byte, found chan<- *source.Decl) {
 	// Ragel setup
 	var (
 		data = file      // input
@@ -52,7 +52,7 @@ action comment_clear {
 
 action submit {
 	if blockLevel == 0 {
-		d := docc.Decl{
+		d := source.Decl{
 			LineNo: lineNo,
 			Source: string(data[lineOffset:p+1]),
 		}
