@@ -45,7 +45,6 @@ func TestGit(t *testing.T) {
 	// start server
 	rand.Seed(time.Now().UnixNano())
 	port := strconv.Itoa(49152 + rand.Intn(65535-49152))
-	uri := "git://localhost:" + port + "/repo1"
 
 	daemon := exec.Command("git", "daemon", "--port="+port, "--export-all", "--base-path=.", ".")
 	daemon.Dir = serveDir
@@ -58,12 +57,11 @@ func TestGit(t *testing.T) {
 	time.Sleep(time.Second)
 
 	// client setup
-	workDir, err := ioutil.TempDir("", "git-work-")
-	if err != nil {
+	var client git
+	if client.Root, err = ioutil.TempDir("", "git-work-"); err != nil {
 		t.Fatal(err)
 	}
-	defer os.RemoveAll(workDir)
-	git := NewGit(workDir)
+	defer os.RemoveAll(client.Root)
 
 	archiveDir, err := ioutil.TempDir("", "git-archive-")
 	if err != nil {
@@ -72,29 +70,31 @@ func TestGit(t *testing.T) {
 	defer os.RemoveAll(archiveDir)
 
 	// test workflow
-	if ok := git.Extract(archiveDir); ok {
+	if ok := client.Extract(archiveDir); ok {
 		t.Fatal("extracted non-existing archive")
 	}
-	if ok := git.Resolve(uri + "doesnotexist"); ok {
+	client.URI = "git://localhost:" + port + "/doesnotexist"
+	if ok := client.Resolve(); ok {
 		t.Fatal("resolved non-existing repository")
 	}
-	if ok := git.Resolve(uri); !ok {
+
+	client.URI = "git://localhost:" + port + "/repo1"
+	if ok := client.Resolve(); !ok {
 		t.Fatal("no resolve")
 	}
-	git.Archive(archiveDir)
+	client.Archive(archiveDir)
 
 	// new client
-	workDir, err = ioutil.TempDir("", "git-work-")
+	client.Root, err = ioutil.TempDir("", "git-work-")
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer os.RemoveAll(workDir)
-	git = NewGit(workDir)
+	defer os.RemoveAll(client.Root)
 
-	if ok := git.Extract(archiveDir); !ok {
+	if ok := client.Extract(archiveDir); !ok {
 		t.Fatal("no extraction")
 	}
-	if ok := git.Sync(uri); ok {
+	if ok := client.Sync(); ok {
 		t.Error("sync without change")
 	}
 
@@ -111,7 +111,7 @@ func TestGit(t *testing.T) {
 		}
 	}
 
-	if ok := git.Sync(uri); !ok {
+	if ok := client.Sync(); !ok {
 		t.Error("no sync")
 	}
 }

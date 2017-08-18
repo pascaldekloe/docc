@@ -14,8 +14,6 @@ import (
 
 type Display struct {
 	ID repo.Name
-	// Version control location.
-	URL string
 
 	RepoLabel string
 	// URL to the main page.
@@ -53,16 +51,14 @@ func gitHubGET(w http.ResponseWriter, r *http.Request, params httprouter.Params)
 
 	// clear
 
-	url := GitHubLink + accountParam + "/" + repoParam + ".git"
 	d := &Display{
-		URL:          url,
 		AccountLabel: accountParam,
 		RepoLabel:    repoParam,
+		RepoLink:     GitHubLink + accountParam + "/" + repoParam,
 		HostLabel:    GitHubLabel,
 		HostLink:     GitHubLink,
 	}
-	d.RepoLink = url[:len(url)-4]
-	d.AccountLink = url[:len(url)-5-len(repoParam)]
+	d.AccountLink = d.RepoLink[:len(d.RepoLink)-len(repoParam)-1]
 	d.ID = repo.Name(d.RepoLink[len(GitHubLink):])
 
 	h := w.Header()
