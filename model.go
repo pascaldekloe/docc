@@ -12,10 +12,12 @@ type Decl struct {
 
 // File is a source code file.
 type File struct {
-	// Path is the file location.
+	// Path is the relative location within the repository.
 	Path string
 	// Vars are the variable declarations.
 	Vars []*Decl
 	// Funcs are the function declarations.
 	Funcs []*Decl
+	// Issues describes content problems in English.
+	Issues string
 }
