@@ -1,17 +1,20 @@
 package parse // import "docc.io/source/parse"
 
-import "docc.io/source"
+import (
+	"fmt"
+
+	"docc.io/source"
+)
 
 %%{
 	machine c_blocks;
 	write data;
 }%%
 
-// C sends all declarations and definitions from a C source code file to found.
-func C(file []byte, found chan<- *source.Decl) {
+// Code sends all declarations and definitions from a C source code file to a channel.
+func Code(data []byte, found chan<- *source.Decl) error {
 	// Ragel setup
 	var (
-		data = file      // input
 		cs   int         // state
 		p    int         // data index
 		pe   = len(data) // data end
@@ -27,7 +30,6 @@ func C(file []byte, found chan<- *source.Decl) {
 	// source code block nesting
 	blockLevel := 0
 
-	for p < pe {
 %%{
 
 new_line = '\n' @{
@@ -87,7 +89,7 @@ qchar = '\'' ('\\' any)? ^['\\]* '\'' ;
 prep = '#' ^new_line* new_line ;
 
 # faster than stepping out of machine
-other = ! ('\n' | '/' ^[*/] | '{' | '}' | ';' | '"' | '\'' | '#') ;
+other = ! ('\n' | '/' ^[*/] | '{' | '}' | ';' | '"' | '\'' | '#' | '') ;
 
 
 main := (new_line | comment | comment_block
@@ -99,9 +101,10 @@ write exec;
 
 }%%
 
-		// skip next byte for syntax mismatch case
-		p++
-	}
-
 	close(found)
+
+	if p < pe {
+		return fmt.Errorf("syntax mismatch at line %d, byte %d", lineNo, p)
+	}
+	return nil
 }

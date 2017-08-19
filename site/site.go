@@ -9,6 +9,7 @@ import (
 	"github.com/julienschmidt/httprouter"
 )
 
+// Router holds the complete setup.
 var Router = httprouter.New()
 
 func init() {

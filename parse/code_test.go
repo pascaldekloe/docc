@@ -30,7 +30,7 @@ func TestComments(t *testing.T) {
 			feed := comment + "\n" + def
 
 			c := make(chan *source.Decl)
-			go C([]byte(feed), c)
+			go Code([]byte(feed), c)
 
 			var got *source.Decl
 			for d := range c {
@@ -65,7 +65,7 @@ func TestStdioH(t *testing.T) {
 	}
 
 	c := make(chan *source.Decl, 10)
-	go C(data, c)
+	go Code(data, c)
 	for def := range c {
 		t.Logf("stdio.h:%d: %q\n\t%q\n\n", def.LineNo, def.Source, def.Comment)
 	}

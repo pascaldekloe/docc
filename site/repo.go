@@ -12,6 +12,7 @@ import (
 	"docc.io/source/repo"
 )
 
+// Display holds repository information.
 type Display struct {
 	ID repo.Name
 
@@ -28,8 +29,8 @@ type Display struct {
 	HostLink string
 }
 
-const GitHubLabel = "GitHub"
-const GitHubLink = "https://github.com/"
+const gitHubLabel = "GitHub"
+const gitHubLink = "https://github.com/"
 
 func gitHubGET(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
 	accountParam, repoParam := params[0].Value, params[1].Value
@@ -54,12 +55,12 @@ func gitHubGET(w http.ResponseWriter, r *http.Request, params httprouter.Params)
 	d := &Display{
 		AccountLabel: accountParam,
 		RepoLabel:    repoParam,
-		RepoLink:     GitHubLink + accountParam + "/" + repoParam,
-		HostLabel:    GitHubLabel,
-		HostLink:     GitHubLink,
+		RepoLink:     gitHubLink + accountParam + "/" + repoParam,
+		HostLabel:    gitHubLabel,
+		HostLink:     gitHubLink,
 	}
 	d.AccountLink = d.RepoLink[:len(d.RepoLink)-len(repoParam)-1]
-	d.ID = repo.Name(d.RepoLink[len(GitHubLink):])
+	d.ID = repo.Name(d.RepoLink[len(gitHubLink):])
 
 	h := w.Header()
 	h.Set("Content-Type", "text/html;charset=utf-8")

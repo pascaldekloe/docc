@@ -67,7 +67,7 @@ func Repo(root string) (<-chan *source.File, error) {
 
 		wg.Add(1)
 		go func(entry *source.File, content []byte) {
-			parseC(entry, content)
+			parseCode(entry, content)
 
 			files <- entry
 			wg.Done()
@@ -95,9 +95,9 @@ func Repo(root string) (<-chan *source.File, error) {
 	return files, nil
 }
 
-func parseC(f *source.File, content []byte) {
+func parseCode(f *source.File, content []byte) {
 	decls := make(chan *source.Decl)
-	go parse.C(content, decls)
+	go parse.Code(content, decls)
 
 	for d := range decls {
 		// BUG(pascaldekloe): Highly incomplete declaration recognition.

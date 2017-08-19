@@ -1,17 +1,17 @@
 .PHONY: test
-test: clean c.go
+test: clean code.go
 	go test
 
 .PHONY: explain
-explain: clean c.dot
-	xdot c.dot
+explain: clean code.dot
+	xdot code.dot
 
-c.go:
-	ragel -Z c.rl
+code.go:
+	ragel -Z code.rl
 
-c.dot:
-	ragel -V -p -o c.dot c.rl
+code.dot:
+	ragel -V -p -o code.dot code.rl
 
 .PHONY: clean
 clean:
-	rm -f c.go c.dot
+	rm -f code.go code.dot

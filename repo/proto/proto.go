@@ -1,3 +1,4 @@
+// Package proto provides repository protocol implementations.
 package proto // import "docc.io/source/repo/proto"
 
 import (
@@ -8,8 +9,10 @@ import (
 	"docc.io/source/repo"
 )
 
+// NetLogger reports remote connectivity issues.
 var NetLogger = log.New(os.Stderr, "net ", log.Ldate|log.Ltime)
 
+// Operations is the work flow abstraction.
 type Operations interface {
 	// Resolve the latest version.
 	Resolve() (ok bool)
