@@ -3,14 +3,19 @@ package site // import "docc.io/source/site"
 import (
 	"fmt"
 	"html/template"
+	"log"
 	"net/http"
 	"net/url"
 	"strings"
 
 	"github.com/julienschmidt/httprouter"
 
+	"docc.io/source"
+	"docc.io/source/proc"
 	"docc.io/source/repo"
 )
+
+var latestFiles = proc.Latest
 
 // Display holds repository information.
 type Display struct {
@@ -27,6 +32,8 @@ type Display struct {
 	HostLabel string
 	// URL to the main page.
 	HostLink string
+
+	Files []*source.File
 }
 
 const gitHubLabel = "GitHub"
@@ -60,13 +67,17 @@ func gitHubGET(w http.ResponseWriter, r *http.Request, params httprouter.Params)
 		HostLink:     gitHubLink,
 	}
 	d.AccountLink = d.RepoLink[:len(d.RepoLink)-len(repoParam)-1]
-	d.ID = repo.Name(d.RepoLink[len(gitHubLink):])
+	d.ID = repo.Name(d.RepoLink[8:])
+
+	d.Files = latestFiles(d.ID)
 
 	h := w.Header()
 	h.Set("Content-Type", "text/html;charset=utf-8")
 	h.Set("Content-Language", "en")
 
-	repoPage.Execute(w, d)
+	if err := repoPage.Execute(w, d); err != nil {
+		log.Printf("%d: template render: %s", d.ID, err)
+	}
 }
 
 var repoPage = template.Must(template.New("repo-html").Parse(`<!DOCTYPE html>
@@ -78,6 +89,15 @@ var repoPage = template.Must(template.New("repo-html").Parse(`<!DOCTYPE html>
 <body>
 
 <h1><a href="{{.RepoLink}}">{{.RepoLabel}}</a> from <a href="{{.AccountLink}}">{{.AccountLabel}}</a>@<a href="{{.HostLink}}">{{.HostLabel}}</a></h>
+
+{{range $index, $file := .Files}}
+
+{{range $indexx, $var := .Vars}}
+<pre>{{$var.Comment}}</pre>
+<h4>{{$file.Path}}:{{$var.LineNo}} - {{$var.Source}}</h4>
+{{end}}
+
+{{end}}
 
 </body>
 `))

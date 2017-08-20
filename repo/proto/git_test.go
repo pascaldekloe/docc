@@ -1,6 +1,7 @@
 package proto // import "docc.io/source/repo/proto"
 
 import (
+	"context"
 	"io/ioutil"
 	"math/rand"
 	"os"
@@ -73,13 +74,13 @@ func TestGit(t *testing.T) {
 	if ok := client.Extract(archiveDir); ok {
 		t.Fatal("extracted non-existing archive")
 	}
+
 	client.URI = "git://localhost:" + port + "/doesnotexist"
-	if ok := client.Resolve(); ok {
+	if ok := client.Resolve(context.Background()); ok {
 		t.Fatal("resolved non-existing repository")
 	}
-
 	client.URI = "git://localhost:" + port + "/repo1"
-	if ok := client.Resolve(); !ok {
+	if ok := client.Resolve(context.Background()); !ok {
 		t.Fatal("no resolve")
 	}
 	client.Archive(archiveDir)
@@ -94,13 +95,14 @@ func TestGit(t *testing.T) {
 	if ok := client.Extract(archiveDir); !ok {
 		t.Fatal("no extraction")
 	}
-	if ok := client.Sync(); ok {
+	if ok := client.Sync(context.Background()); ok {
 		t.Error("sync without change")
 	}
 
 	// update repo
+	update := "hello"
 	{
-		if err := ioutil.WriteFile(repoFile, []byte("hello"), 0644); err != nil {
+		if err := ioutil.WriteFile(repoFile, []byte(update), 0644); err != nil {
 			t.Fatal(err)
 		}
 
@@ -111,7 +113,11 @@ func TestGit(t *testing.T) {
 		}
 	}
 
-	if ok := client.Sync(); !ok {
+	if ok := client.Sync(context.Background()); !ok {
 		t.Error("no sync")
+	}
+
+	if got, err := ioutil.ReadFile(repoFile); string(got) != update {
+		t.Errorf("%s: got %q (%v), want %q", repoFile, got, err, update)
 	}
 }

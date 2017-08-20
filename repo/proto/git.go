@@ -21,11 +21,11 @@ type git struct {
 	URI string
 }
 
-func (g git) Resolve() bool {
-	ctx, cancel := context.WithTimeout(context.Background(), GitResolveTimeout)
+func (g git) Resolve(ctx context.Context) bool {
+	ctx, cancel := context.WithTimeout(ctx, GitResolveTimeout)
 	defer cancel()
 
-	cmd := exec.CommandContext(ctx, "git", "clone", "--branch", "master", "--depth", "1", "--quiet", g.URI, ".")
+	cmd := exec.CommandContext(ctx, "git", "clone", "--quiet", g.URI, ".")
 	cmd.Dir = g.Root
 
 	_, err := cmd.Output()
@@ -41,13 +41,13 @@ func (g git) Resolve() bool {
 	return false
 }
 
-func (g git) Sync() bool {
+func (g git) Sync(ctx context.Context) bool {
 	old := g.Version()
 	if old == "" {
 		return false
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), GitSyncTimeout)
+	ctx, cancel := context.WithTimeout(ctx, GitResolveTimeout)
 	defer cancel()
 
 	cmd := exec.CommandContext(ctx, "git", "pull", "--quiet", g.URI)
@@ -70,7 +70,7 @@ func (g git) Sync() bool {
 func (g git) Archive(dir string) {
 	path := dir + "/git.bundle"
 
-	cmd := exec.Command("git", "bundle", "create", path, "master")
+	cmd := exec.Command("git", "bundle", "create", path, "HEAD")
 	cmd.Dir = g.Root
 
 	_, err := cmd.Output()
@@ -90,7 +90,7 @@ func (g git) Extract(dir string) bool {
 		return false
 	}
 
-	cmd := exec.Command("git", "clone", "--branch", "master", "--quiet", path, g.Root)
+	cmd := exec.Command("git", "clone", "--quiet", path, g.Root)
 	cmd.Dir = g.Root
 
 	_, err := cmd.Output()
@@ -107,7 +107,7 @@ func (g git) Extract(dir string) bool {
 }
 
 func (g git) Version() string {
-	cmd := exec.Command("git", "rev-parse", "--verify", "HEAD")
+	cmd := exec.Command("git", "rev-parse", "HEAD")
 	cmd.Dir = g.Root
 
 	out, err := cmd.Output()

@@ -4,7 +4,26 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	"docc.io/source"
+	"docc.io/source/repo"
 )
+
+func init() {
+	// mock repository lookup
+	latestFiles = func(id repo.Name) []*source.File {
+		return []*source.File{
+			{
+				Vars: []*source.Decl{
+					{LineNo: 1, Source: "extern int g", Comment: "// !"},
+				},
+				Funcs: []*source.Decl{
+					{LineNo: 42, Source: "int f(void)", Comment: "// ?"},
+				},
+			},
+		}
+	}
+}
 
 func TestGitHubDedupe(t *testing.T) {
 	srv := httptest.NewServer(Router)

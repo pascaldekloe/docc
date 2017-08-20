@@ -2,6 +2,7 @@
 package proto // import "docc.io/source/repo/proto"
 
 import (
+	"context"
 	"log"
 	"os"
 	"strings"
@@ -15,11 +16,11 @@ var NetLogger = log.New(os.Stderr, "net ", log.Ldate|log.Ltime)
 // Operations is the work flow abstraction.
 type Operations interface {
 	// Resolve the latest version.
-	Resolve() (ok bool)
+	Resolve(ctx context.Context) (ok bool)
 
 	// Sync to the latest version.
 	// Returns whether the version changed.
-	Sync() (ok bool)
+	Sync(ctx context.Context) (ok bool)
 
 	// Archive the state.
 	// The directory must be present and writable.
